@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+
+  flask:
+    build: .
+    ports:
+      - "5000:5000"
+    command: flask --app app --debug run -h 0.0.0.0
+    volumes:
+      - .:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - redis
+      - rabbit
+
+  worker:
+    build: .
+    command: celery --app app.celery worker --loglevel=info
+    volumes:
+      - .:/usr/src/app
+    env_file:
+      - .env
+    depends_on:
+      - flask
+      - redis
+      - rabbit
+
+  redis:
+    image: redis:6-alpine
+
+  rabbit:
+    image: rabbitmq:3-management-alpine
+    env_file:
+      - '.env'
+    ports:
+      - "5672:5672"
+      - "15672:15672"

@@ -1,6 +1,5 @@
 import os
 import time
-import json
 
 from flask import Flask, request, render_template, redirect, url_for
 from tasks import make_celery
@@ -18,7 +17,7 @@ celery = make_celery(app)
 from celery.result import AsyncResult
 
 
-r = Redis("localhost", 6379)
+r = Redis("redis", 6379)
 
 
 @celery.task()
@@ -39,13 +38,11 @@ def index():
     return render_template("index.html")
 
 
-@app.route("/<task_id>")
+@app.route("/task/<task_id>")
 def resolve(task_id):
     task_result = AsyncResult(task_id, app=celery)
     is_ready = task_result.ready()
-    if is_ready:
-        return render_template("resolve.html", result=task_result.result)
-    return "Try again later"
+    return render_template("resolve.html", task_result=task_result)
 
 
 @app.route("/purge")
@@ -55,3 +52,7 @@ def purge():
             r.delete(key)
     return f"Purged keys"
 
+
+@app.route("/delete/<task_id>")
+def clear_task(task_id):
+    celery.AsyncResult(task_id).forget()

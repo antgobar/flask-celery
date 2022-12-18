@@ -41,8 +41,10 @@ def index():
 @app.route("/task/<task_id>")
 def resolve(task_id):
     task_result = AsyncResult(task_id, app=celery)
-    is_ready = task_result.ready()
-    return render_template("resolve.html", task_result=task_result)
+    if task_result.ready():
+        return render_template("resolve.html", task_result=task_result)
+
+    return "Try again later"
 
 
 @app.route("/purge")
@@ -50,9 +52,10 @@ def purge():
     for key in r.scan_iter():
         if "celery" in key.decode():
             r.delete(key)
-    return f"Purged keys"
+    return "Purged keys"
 
 
 @app.route("/delete/<task_id>")
 def clear_task(task_id):
     celery.AsyncResult(task_id).forget()
+    return f"Task ID: {task_id} cleared"
